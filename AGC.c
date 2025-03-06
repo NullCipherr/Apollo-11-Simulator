@@ -172,16 +172,204 @@ void inicializar_estado()
     pthread_mutex_unlock(&mutex_estado); // Libera o acesso a variável compartilhada
 }
 
-// Função de controle de voo
-// Responsável por controlar a nave
+// Função para obter o nome do estado atual da missão
+const char *obter_nome_estado()
+{
+    switch (estado_nave.estado_missao)
+    {
+    case PREPARACAO:
+        return "PREPARACAO";
+    case LANCAMENTO:
+        return "LANCAMENTO";
+    case ORBITA_TERRESTRE:
+        return "ORBITA_TERRESTRE";
+    case TRANSITO_LUNAR:
+        return "TRANSITO_LUNAR";
+    case ORBITA_LUNAR:
+        return "ORBITA_LUNAR";
+    case ALUNISSAGEM:
+        return "ALUNISSAGEM";
+    case SUPERFICIE_LUNAR:
+        return "SUPERFICIE_LUNAR";
+    case RETORNO_TERRA:
+        return "RETORNO_TERRA";
+    case REENTRADA:
+        return "REENTRADA";
+    case AMERISSAGEM:
+        return "AMERISSAGEM";
+    case FINALIZACAO:
+        return "FINALIZACAO";
+    case EMERGENCIA:
+        return "EMERGENCIA";
+    default:
+        return "DESCONHECIDO";
+    }
+}
+
+// Função para avançar o estado da missão
+void avancar_estado_missao()
+{
+    pthread_mutex_lock(&mutex_estado); // Bloqueia o acesso a variável compartilhada
+
+    switch (estado_nave.estado_missao)
+    {
+    case PREPARACAO:
+        estado_nave.estado_missao = LANCAMENTO;
+        printf("Mudança de estado: PREPARACAO -> LANCAMENTO\n");
+        break;
+    case LANCAMENTO:
+        estado_nave.estado_missao = ORBITA_TERRESTRE;
+        printf("Mudança de estado: LANCAMENTO -> ORBITA_TERRESTRE\n");
+        break;
+    case ORBITA_TERRESTRE:
+        estado_nave.estado_missao = TRANSITO_LUNAR;
+        printf("Mudança de estado: ORBITA_TERRESTRE -> TRANSITO_LUNAR\n");
+        break;
+    case TRANSITO_LUNAR:
+        estado_nave.estado_missao = ORBITA_LUNAR;
+        printf("Mudança de estado: TRANSITO_LUNAR -> ORBITA_LUNAR\n");
+        break;
+    case ORBITA_LUNAR:
+        estado_nave.estado_missao = ALUNISSAGEM;
+        printf("Mudança de estado: ORBITA_LUNAR -> ALUNISSAGEM\n");
+        break;
+    case ALUNISSAGEM:
+        estado_nave.estado_missao = SUPERFICIE_LUNAR;
+        printf("Mudança de estado: ALUNISSAGEM -> SUPERFICIE_LUNAR\n");
+        break;
+    case SUPERFICIE_LUNAR:
+        estado_nave.estado_missao = RETORNO_TERRA;
+        printf("Mudança de estado: SUPERFICIE_LUNAR -> RETORNO_TERRA\n");
+        break;
+    case RETORNO_TERRA:
+        estado_nave.estado_missao = REENTRADA;
+        printf("Mudança de estado: RETORNO_TERRA -> REENTRADA\n");
+        break;
+    case REENTRADA:
+        estado_nave.estado_missao = AMERRISSAGEM;
+        printf("Mudança de estado: REENTRADA -> AMERRISSAGEM\n");
+        break;
+    case AMERRISSAGEM:
+        estado_nave.estado_missao = FINALIZACAO;
+        printf("Mudança de estado: AMERRISSAGEM -> FINALIZACAO\n");
+        break;
+    case FINALIZACAO:
+        estado_nave.estado_missao = EMERGENCIA;
+        printf("Mudança de estado: FINALIZACAO -> EMERGENCIA\n");
+        break;
+    case EMERGENCIA:
+        // Permance em estado de emergência
+        break;
+    }
+
+    pthread_mutex_unlock(&mutex_estado); // Libera o acesso a variável compartilhada
+}
+
+// Função para acionar a emergência
+void acionar_emergencia()
+{
+    pthread_mutex_lock(&mutex_estado); // Bloqueia o acesso a variável compartilhada
+
+    if (estado_nave.estado_missao != EMERGENCIA)
+    {
+        estado_nave.estado_missao = EMERGENCIA;
+        estado_nave.emergencia = TRUE;
+        printf("Emergência acionada!\n");
+    }
+
+    pthread_mutex_unlock(&mutex_estado); // Libera o acesso a variável compartilhada
+}
+
+// Função para atualizar a fisica da nave
+void atualizar_fisica(double delta_tempo)
+{
+    pthread_mutex_lock(&mutex_estado); // Bloqueia o acesso a variável compartilhada
+
+    // Atualiza a posição com base na velocidade atual
+    estado_nave.posicao.x += estado_nave.velocidade.x * delta_tempo; // Atualiza a posição x
+    estado_nave.posicao.y += estado_nave.velocidade.y * delta_tempo; // Atualiza a posição y
+    estado_nave.posicao.z += estado_nave.velocidade.z * delta_tempo; // Atualiza a posição z
+
+    // Atualiza a velocidade com base na aceleração atual
+    estado_nave.velocidade.x += estado_nave.aceleracao.x * delta_tempo; // Atualiza a velocidade x
+    estado_nave.velocidade.y += estado_nave.aceleracao.y * delta_tempo; // Atualiza a velocidade y
+    estado_nave.velocidade.z += estado_nave.aceleracao.z * delta_tempo; // Atualiza a velocidade z
+
+    // Simulação simples de gravidade
+    double distancia_terra = sqrt(pow(estado_nave.posicao.x, 2) +
+                                  pow(estado_nave.posicao.y, 2) +
+                                  pow(estado_nave.posicao.z, 2));
+
+    // Aceleração gravitacional da Terra simples
+    if (distancia_terra > 0)
+    {
+        double G = 6.67430e-11;                                                     // Constante gravitacional (m^3 kg^-1 s^-2)
+        double M_terra = 5.972e24;                                                  // Massa da Terra (kg)
+        double aceleracao_grav = G * M_terra / (distancia_terra * distancia_terra); // Aceleração gravitacional
+
+        // Direção da aceleração gravitacional (Para o centro da terra)
+        double fator = aceleracao_grav / distancia_terra;
+        estado_nave.aceleracao.x = -estado_nave.posicao.x * fator; // Aceleração x
+        estado_nave.aceleracao.y = -estado_nave.posicao.y * fator; // Aceleração y
+        estado_nave.aceleracao.z = -estado_nave.posicao.z * fator; // Aceleração z
+    }
+
+    // Atualiza o tempo da missão
+    estado_nave.tempo_missao += delta_tempo;
+
+    pthread_mutex_unlock(&mutex_estado); // Libera o acesso a variável compartilhada
+}
+
+// Função de controle de voo - Responsável por controlar a nave
 void *controle_voo(void *arg)
 {
     printf("Iniciando modulo de controle de voo...\n");
+
+    double delta_tempo = INTERVALO_VOO / 1000000.0; // Converte o intervalo de tempo para segundos
+    double tempo_para_proximo_estado = 30.0;        // Tempo para o próximo estado da missão (Segundos)
+
+    // Inicializa o estado da nave, enquanto o sistema estiver ativo
+    while (estado_nave.sistema_ativo)
+    {
+        // Atualiza a fisica da nave
+        atualizar_fisica(delta_tempo * estado_nave.simulacao_acelerada);
+
+        // Controle de voo baseada no estado atual
+        pthread_mutex_lock(&mutex_estado); // Bloqueia o acesso a variável compartilhada
+
+        // Verificação de Ssegurança
+        if (estado_nave.temperatura_interna > 50 && estado_nave.estado_missao != EMERGENCIA)
+        {
+            acionar_emergencia("Temperatura interna crítica!"); // Aciona a emergência
+        }
+
+        if (estado_nave.combustivel_principal <= 0 && (estado_nave.estado_missao == LANCAMENTO || estado_nave.estado_missao == TRANSITO_LUNAR) && estado_nave.estado_missao != EMERGENCIA)
+        {
+            acionar_emergencia("Combusitível do motor principal esgotado!"); // Aciona a emergência
+        }
+
+        // Lógica para mudança de estado
+        tempo_para_proximo_estado -= delta_tempo * estado_nave.simulacao_acelerada;
+        if (tempo_para_proximo_estado <= 0 && estado_nave.estado_missao != EMERGENCIA && estado_nave.estado_missao != FINALIZACAO)
+        {
+            pthread_mutex_unlock(&mutex_estado); // Libera o acesso a variável compartilhada
+            avancar_estado_missao();             // Avança o estado da missão
+            tempo_para_proximo_estado = 30.0;    // Reseta o tempo para o próximo estado
+        }
+        else
+        {
+            pthread_mutex_unlock(&mutex_estado); // Libera o acesso a variável compartilhada
+        }
+
+        // Pausa entre as atualizações
+        usleep(INTERVALO_VOO / estado_nave.simulacao_acelerada);
+    }
+
+    printf("Finalizando modulo de controle de voo...\n");
     return NULL;
 }
 
-// Função de controle de propulsão
-// Responsável por controlar os motores
+// Função de controle de propulsão - Responsável por controlar os motores
 void *controle_propulsao(void *arg)
 {
     printf("Iniciando modulo de controle de propulsao...\n");
