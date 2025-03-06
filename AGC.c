@@ -391,9 +391,10 @@ void *controle_propulsao(void *arg)
             double consumo = 15000.0 * delta_tempo * estado_nave.simulacao_acelerada; // 15.000 kg/s
             estado_nave.combustivel_principal -= consumo;
 
+            // Combustível mínimo
             if (estado_nave.combustivel_principal <= 0)
             {
-                estado_nave.combustivel_principal = 0;
+                estado_nave.combustivel_principal = 0; // Combustível do motor principal
             }
 
             // Aceleração resultante simples
@@ -451,11 +452,81 @@ void *controle_propulsao(void *arg)
     return NULL;
 }
 
-// Função de controle de energia
-// Responsável por controlar a energia
+// Função de controle de energia - Responsável por gerenciar energia e sistemas de suporte à vida
 void *controle_energia(void *arg)
 {
     printf("Iniciando modulo de controle de energia...\n");
+
+    double delta_tempo = INTERVALO_ENERGIA / 1000000.0; // Converte o intervalo de tempo para segundos
+
+    while (estado_nave.sistema_ativo)
+    {
+        pthread_mutex_lock(&mutex_estado); // Bloqueia o acesso a variável compartilhada
+
+        // Calcula o consumo de energia com base nos sistemas ativos
+        double consumo_base = 80.0;                                               // Consumo base - 80 Watts
+        double consumo_propulsao = estado_nave.empuxo_principal > 0 ? 50.0 : 0.0; // Consumo de energia do motor principal - 50 Watts
+        double consumo_rcs = estado_nave.empuxo_rcs > 0 ? 20.0 : 0.0;             // Consumo de energia do RCS - 20 Watts
+        double consumo_computadores = 30.0;                                       // Consumo de energia dos computadores - 30 Watts
+        double consumo_suporte_vida = 40.0;                                       // Consumo de energia dos sistemas de suporte à vida - 40 Watts
+
+        // Consumo total de energia
+        estado_nave.consumo_energia = consumo_base + consumo_propulsao + consumo_rcs + consumo_computadores + consumo_suporte_vida; // Consumo total de energia.
+
+        // Aplicar o consumo de energia
+        double energia_consumida = estado_nave.consumo_energia * delta_tempo * estado_nave.simulacao_acelerada / 3600.0; // Converter para Wh
+        estado_nave.energia_principal -= energia_consumida;
+
+        // Caso a energia principal acabar, utilizar a energia de reserva
+        if (estado_nave.energia_principal <= 0)
+        {
+            estado_nave.energia_reserva += estado_nave.energia_principal; // Adiciona a energia principal restante à reserva
+            estado_nave.energia_principal = 0;                            // Zera a energia principal
+
+            // Caso a energia de reserva acabe, acionar a emergência
+            if (estado_nave.energia_reserva <= 0)
+            {
+                estado_nave.energia_reserva = 0; // Zera a energia de reserva
+                if (estado_nave.estado_missao != EMERGENCIA)
+                {
+                    acionar_emergencia("Energia esgotada!"); // Aciona a emergência
+                }
+            }
+        }
+
+        // Simula a variação de temperatura interna
+        double variacao_tempertura = ((rand() % 100) - 50) / 500.0; // Variação de temperatura aleatória - Entre -0.1 e 0.1 graus Celsius
+        estado_nave.temperatura_interna += variacao_tempertura;     // Atualiza a temperatura interna
+
+        // Corrige a temperatura interna (Sistema de controle térmico)
+        if (estado_nave.temperatura_interna < 20.0) // Se a temperatura interna estiver abaixo de 20 graus Celsius, liga os aquecedores
+        {
+            estado_nave.temperatura_interna += 0.2 * delta_tempo * estado_nave.simulacao_acelerada; // Aumenta a temperatura interna - 0.2 graus Celsius por segundo
+            estado_nave.consumo_energia += 10.0;                                                    // Aumenta o consumo de energia - 10 Watts (Aquecedores)
+        }
+        else if (estado_nave.temperatura_interna > 24.0) // Se a temperatura interna estiver acima de 24 graus Celsius, liga os resfriadores
+        {
+            estado_nave.temperatura_interna -= 0.2 * delta_tempo * estado_nave.simulacao_acelerada; // Diminui a temperatura interna - 0.2 graus Celsius por segundo
+            estado_nave.consumo_energia += 10.0;                                                    // Consumo de energia - 10 Watts (Resfriadores)
+        }
+
+        // Simulação de radiação
+        if (estado_nave.estado_missao == TRANSITO_LUNAR || estado_nave.estado_missao == ORBITA_LUNAR || estado_nave.estado_missao == SUPERFICIE_LUNAR)
+        {
+            estado_nave.radiacao = 1.0 + ((rand() % 100) / 100.0); // 1.0 a 2.0 mSv/h
+        }
+        else
+        {
+            estado_nave.radiacao = 0.1 + ((rand() % 50) / 500.0); // 0.1 a 0.2 mSv/h
+        }
+
+        pthread_mutex_unlock(&mutex_estado); // Libera o acesso a variável compartilhada
+
+        // Pausa entre as atualizações
+        usleep(INTERVALO_ENERGIA / estado_nave.simulacao_acelerada); // Pausa a execução por um intervalo de tempo
+    }
+
+    printf("Finalizando modulo de controle de energia...\n");
     return NULL;
 }
 
