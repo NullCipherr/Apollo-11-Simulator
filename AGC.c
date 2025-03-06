@@ -362,7 +362,7 @@ void *controle_voo(void *arg)
         }
 
         // Pausa entre as atualizações
-        usleep(INTERVALO_VOO / estado_nave.simulacao_acelerada);
+        usleep(INTERVALO_VOO / estado_nave.simulacao_acelerada); // Pausa a execução por um intervalo de tempo
     }
 
     printf("Finalizando modulo de controle de voo...\n");
@@ -373,6 +373,81 @@ void *controle_voo(void *arg)
 void *controle_propulsao(void *arg)
 {
     printf("Iniciando modulo de controle de propulsao...\n");
+
+    double delta_tempo = INTERVALO_PROPULSAO / 1000000.0; // Converte o intervalo de tempo para segundos
+
+    while (estado_nave.sistema_ativo)
+    {
+        pthread_mutex_lock(&mutex_estado); // Bloqueia o acesso a variável compartilhada
+
+        // Gerencia propulsão baseado no estado da missão
+        switch (estado_nave.estado_missao)
+        {
+        case LANCAMENTO:
+            // Durante o lançamneto é utilizado propulsão média
+            estado_nave.empuxo_principal = 35000000.0; // 35 MN (aproximado para Saturn V) - 35.000.000 Newton
+
+            // Consumo de combustível
+            double consumo = 15000.0 * delta_tempo * estado_nave.simulacao_acelerada; // 15.000 kg/s
+            estado_nave.combustivel_principal -= consumo;
+
+            if (estado_nave.combustivel_principal <= 0)
+            {
+                estado_nave.combustivel_principal = 0;
+            }
+
+            // Aceleração resultante simples
+            double massa_total = 3000000.0 - (1924000.0 - estado_nave.combustivel_principal); // 3.000.000 kg (aproximado para Saturn V)
+            double aceleracao = estado_nave.empuxo_principal / massa_total;                   // Aceleração resultante - a = F / m
+
+            // Direçãol da aceleração simples
+            estado_nave.aceleracao.y = aceleracao - 9.81; // Aceleração y - Aceleração gravitacional da Terra
+            break;
+
+        case ORBITA_TERRESTRE:
+        case TRANSITO_LUNAR:
+        case ORBITA_LUNAR:
+        case RETORNO_TERRA:
+            // Manobras ocasionais
+            if (rand() % 100 < 5) // 5 % de chance
+            {
+                estado_nave.empuxo_rcs = 500.0;                                                     // 500 Newton
+                estado_nave.combustivel_rcs -= 0.1 * delta_tempo * estado_nave.simulacao_acelerada; // 0.1 kg/s
+            }
+            else
+            {
+                estado_nave.empuxo_rcs = 0.0; // Desliga o RCS
+            }
+            break;
+
+        case ALUNISSAGEM:
+            // Desaceleração controlada para alunissagem
+            estado_nave.empuxo_principal = 45000.0;                                                    // 45 kN (aproximado para Lunar Module Descent Engine) - 45.000 Newton
+            estado_nave.combustivel_principal -= 50.0 * delta_tempo * estado_nave.simulacao_acelerada; // 50 kg/s
+            break;
+
+        default:
+            estado_nave.empuxo_principal = 0.0; // Desliga o motor principal
+            estado_nave.empuxo_rcs = 0.0;       // Desliga o RCS
+        }
+
+        // Garante que o combustível não seja negativo
+        if (estado_nave.combustivel_principal < 0)
+        {
+            estado_nave.combustivel_principal = 0; // Combustível do motor principal
+        }
+        if (estado_nave.combustivel_rcs < 0)
+        {
+            estado_nave.combustivel_rcs = 0; // Combustível do RCS
+        }
+
+        pthread_mutex_unlock(&mutex_estado); // Libera o acesso a variável compartilhada
+
+        // Pausa entre as atualizações
+        usleep(INTERVALO_PROPULSAO / estado_nave.simulacao_acelerada); // Pausa a execução por um intervalo de tempo
+    }
+
+    printf("Finalizando modulo de controle de propulsao...\n");
     return NULL;
 }
 
