@@ -1,4 +1,4 @@
-# # Apollo-11-Simulator
+## Apollo-11-Simulator
 
 A C-based simulation of the Apollo 11 mission control systems, featuring real-time monitoring and control of flight systems, propulsion, and power management.
 
@@ -88,7 +88,7 @@ make run
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/Apollo-11-Simulator.git
+git clone https://github.com/NullCipherr/Apollo-11-Simulator.git
 ```
 
 2. Navigate to the project directory:
@@ -110,10 +110,6 @@ To clean build files:
 ```bash
 make clean
 ```
-
-## License
-
-[Add your chosen license here]
 
 ## Author
 
