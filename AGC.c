@@ -16,10 +16,6 @@
     da nave.
 */
 
-
-
-
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////// Bibliotecas ////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -35,10 +31,6 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////// Definições ////////////////////////////////////////////////////////////////////
@@ -124,22 +116,61 @@ EstadoNave estado_nave;       // Estado da nave
 pthread_mutex_t mutex_estado; // Mutex para sincronização
 
 // Variaveis de Threads
-pthread_t thread_voo;
-pthread_t thread_propulsao;
-pthread_t thread_energia;
-pthread_t thread_interface;
+pthread_t thread_voo;       // Thread de controle de voo
+pthread_t thread_propulsao; // Thread de controle de propulsão
+pthread_t thread_energia;   // Thread de controle de energia
+pthread_t thread_interface; // Thread de interface
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////// Funções ////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Função para inicializar o estado da nave
+void inicializar_estado()
+{
+    pthread_mutex_lock(&mutex_estado); // Bloqueia o acesso a variável compartilhada
+
+    // Inicializa a posição e o movimento
+    estado_nave.posicao = (Vetor3D){0.0, 0.0, 0.0};    // Posição da nave - Coordenadas x, y e z
+    estado_nave.velocidade = (Vetor3D){0.0, 0.0, 0.0}; // Velocidade da nave - Coordenadas x, y e z
+    estado_nave.aceleracao = (Vetor3D){0.0, 0.0, 0.0}; // Aceleração da nave - Coordenadas x, y e z
+    estado_nave.orientacao = (Vetor3D){0.0, 0.0, 0.0}; // Orientação da nave - Coordenadas x, y e z
+
+    // Estado inicial da missão
+    estado_nave.estado_missao = PREPARACAO; // Estado da missão - Preparação
+    estado_nave.tempo_missao = 0.0;         // Tempo da missão - 0 segundos
+
+    // Propulsão
+    estado_nave.combustivel_principal = 1924000.0; // Combustível do motor principal - ~1.924.000 kg (Saturn V)
+    estado_nave.combustivel_rcs = 500.0;           // Combustível do sistema de controle de reação - 1000 kg
+    estado_nave.empuxo_principal = 0.0;            // Empuxo do motor principal - 0, pois o motor está desligado
+    estado_nave.empuxo_rcs = 0.0;                  // Empuxo do sistema de controle de reação - 0, pois o motor está desligado
+
+    // Energia
+    estado_nave.energia_principal = 10000.0; // Energia do motor principal - 10.000 Watts-Hora
+    estado_nave.energia_reserva = 5000.0;    // Energia de reserva - 5000 Watts-Hora
+    estado_nave.consumo_energia = 100.0;     // Consumo de energia - 100 Watts
+
+    // Ambiente
+    estado_nave.temperatura_interna = 22.0; // Temperatura interna da nave - 22 graus Celsius
+    estado_nave.pressao_interna = 101.3;    // Pressão interna da nave - 101.3 kPa
+    estado_nave.radiacao = 0.1;             // Radiação - 0.1 mSv/hora
+
+    // Comunicação
+    estado_nave.comunicacao_ativa = TRUE; // Comunicação ativa - 1 (ativa)
+    estado_nave.forca_sinal = 100.0;      // Força do sinal de comunicação - 100 dB
+
+    // Flags de Controle
+    estado_nave.sistema_ativo = TRUE;    // Sistema ativo - 1 (ativo)
+    estado_nave.emergencia = FALSE;      // Emergência - 0 (sem emergência)
+    estado_nave.simulacao_acelerada = 0; // Simulação acelerada - 0 (desligada)
+
+    pthread_mutex_unlock(&mutex_estado); // Libera o acesso a variável compartilhada
+}
 
 // Função de controle de voo
 // Responsável por controlar a nave
