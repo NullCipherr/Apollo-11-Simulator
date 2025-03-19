@@ -3,12 +3,10 @@
     Criado por: Andrei Costa
     Data: 06/03/2025
 
-    Descrição: Este programa simula o sistema de controle de voo da Apollo 11.
+    Este programa simula o sistema de controle de voo da Apollo 11.
     O programa é composto por 3 módulos: o módulo de controle de voo, o módulo
     de controle de propulsão e o módulo de controle de energia.
 
-    Expansão: Adicionamos estruturas de dados para representar o estado da nave,
-    comunicação entre módulos, lógica de simulação física e interface básica.
 */
 
 #include <stdio.h>
