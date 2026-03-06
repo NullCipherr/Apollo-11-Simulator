@@ -1,37 +1,31 @@
-# Compiler settings
-CC=gcc
-CFLAGS=-Wall -Wextra -pthread
-LDFLAGS=-lm -pthread
+CC = gcc
+CFLAGS = -Wall -Wextra -I./include -g -pthread
+LDFLAGS = -lncurses -lm
 
-# Project files
-TARGET=apollo11
-SRC=AGC.c
-OBJ=$(SRC:.c=.o)
+SRC_DIR = src
+OBJ_DIR = obj
+INC_DIR = include
 
-# Default target
-all: $(TARGET)
+SRCS = $(wildcard $(SRC_DIR)/*.c)
+OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
 
-# Linking
-$(TARGET): $(OBJ)
-	$(CC) $(OBJ) -o $(TARGET) $(LDFLAGS)
+TARGET = apollo_simulator
 
-# Compilation
-%.o: %.c
+.PHONY: all clean run setup
+
+all: setup $(TARGET)
+
+setup:
+	@mkdir -p $(OBJ_DIR)
+
+$(TARGET): $(OBJS)
+	$(CC) $(OBJS) -o $(TARGET) $(LDFLAGS)
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean build files
 clean:
-	@echo "Realizando a limpeza dos arquivos de compilação"
-	rm -f $(OBJ) $(TARGET)
+	rm -rf $(OBJ_DIR) $(TARGET) telemetry.csv
 
-# Run the simulator
-run: $(TARGET)
+run: all
 	./$(TARGET)
-
-help:
-	@echo "Usage: make [all|clean|run]"
-	@echo "all: Build the simulator"
-	@echo "clean: Remove build files"
-	@echo "run: Run the simulator"
-
-.PHONY: all clean run
